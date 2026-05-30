@@ -1,0 +1,4 @@
+# 绑定自定义域名时，把下面改成你的域名（不要 https://，不要路径）
+# 例如：branch.example.com
+#
+# example.com

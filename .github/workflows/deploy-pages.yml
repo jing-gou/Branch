@@ -61,10 +61,16 @@ jobs:
           SITE_URL="${{ steps.deployment.outputs.page_url }}"
           echo "Site URL: $SITE_URL"
           curl -fsSL "$SITE_URL" | tee /tmp/index.html
-          JS_PATH=$(grep -oE '/Branch/assets/index-[^"]+\.js' /tmp/index.html | head -1)
-          CSS_PATH=$(grep -oE '/Branch/assets/index-[^"]+\.css' /tmp/index.html | head -1)
+          JS_PATH=$(grep -oE 'src="[^"]+\.js"' /tmp/index.html | head -1 | sed 's/src="//;s/"//')
+          CSS_PATH=$(grep -oE 'href="[^"]+\.css"' /tmp/index.html | head -1 | sed 's/href="//;s/"//')
           test -n "$JS_PATH"
           test -n "$CSS_PATH"
-          curl -fsSL "https://jing-gou.github.io${JS_PATH}" -o /dev/null
-          curl -fsSL "https://jing-gou.github.io${CSS_PATH}" -o /dev/null
+          ORIGIN=$(echo "$SITE_URL" | sed -E 's|(https?://[^/]+).*|\1|')
+          if [[ "$JS_PATH" == /* ]]; then
+            curl -fsSL "${ORIGIN}${JS_PATH}" -o /dev/null
+            curl -fsSL "${ORIGIN}${CSS_PATH}" -o /dev/null
+          else
+            curl -fsSL "${SITE_URL%/}/${JS_PATH#./}" -o /dev/null
+            curl -fsSL "${SITE_URL%/}/${CSS_PATH#./}" -o /dev/null
+          fi
           echo "Asset checks passed."
