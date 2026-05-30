@@ -1,0 +1,129 @@
+@import "tailwindcss";
+@import "./styles/geminiFonts.css";
+@import "katex/dist/katex.min.css";
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+}
+
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Shared scrollbar styling for dark UI */
+.ui-scroll,
+.chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 rgba(15, 23, 42, 0.4);
+}
+
+.ui-scroll::-webkit-scrollbar,
+.chat-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ui-scroll::-webkit-scrollbar-track,
+.chat-scroll::-webkit-scrollbar-track {
+  margin: 2px 0;
+  background: rgba(15, 23, 42, 0.45);
+  border-radius: 999px;
+}
+
+.ui-scroll::-webkit-scrollbar-thumb,
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #64748b 0%, #475569 100%);
+  border: 1px solid rgba(30, 41, 59, 0.8);
+  border-radius: 999px;
+}
+
+.ui-scroll::-webkit-scrollbar-thumb:hover,
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #94a3b8 0%, #64748b 100%);
+}
+
+.ui-scroll::-webkit-scrollbar-corner,
+.chat-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.chat-markdown {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Inline math */
+.chat-markdown .katex {
+  font-size: 1.05em;
+}
+
+/* Block math: $$ ... $$ (display / mathFlow) */
+.chat-markdown .katex-display {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0.85em auto 1em;
+  padding: 0.55em 0.35em;
+  overflow-x: auto;
+  overflow-y: hidden;
+  text-align: center;
+  font-size: 1.22em;
+  line-height: 1.4;
+}
+
+.chat-markdown > .katex-display {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.chat-markdown .katex-display > .katex {
+  font-size: 1.15em;
+  text-align: center;
+}
+
+/* Paragraph wrapper when display math is inline in a p (legacy / edge cases) */
+.chat-markdown p:has(> .katex-display:only-child) {
+  margin-top: 0.85em;
+  margin-bottom: 0.85em;
+  text-align: center;
+}
+
+.chat-markdown p:has(> .katex-display:only-child) > .katex-display {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Heading followed by paragraph — tighten title-to-body gap */
+.chat-markdown h1 + p,
+.chat-markdown h2 + p,
+.chat-markdown h3 + p,
+.chat-markdown h4 + p,
+.chat-markdown h5 + p,
+.chat-markdown h6 + p {
+  margin-top: 0.35em;
+}
+
+.chat-markdown .katex-display::-webkit-scrollbar {
+  height: 4px;
+}
+
+.chat-markdown .katex-display::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 999px;
+}
+
+/* Selected edge highlight */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #a78bfa !important;
+  stroke-width: 2.5px !important;
+}
+
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke: #94a3b8 !important;
+}
