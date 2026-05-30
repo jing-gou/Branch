@@ -15,8 +15,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -38,20 +41,30 @@ jobs:
           cp dist/index.html dist/404.html
           test -f dist/assets/index-*.js
           test -f dist/assets/index-*.css
-          ls -la dist dist/assets | head -20
+          echo "Built files:"
+          find dist -type f | sort
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v5
         with:
           path: dist
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+
+      - name: Verify deployed assets
+        run: |
+          SITE_URL="${{ steps.deployment.outputs.page_url }}"
+          echo "Site URL: $SITE_URL"
+          curl -fsSL "$SITE_URL" | tee /tmp/index.html
+          JS_PATH=$(grep -oE '/Branch/assets/index-[^"]+\.js' /tmp/index.html | head -1)
+          CSS_PATH=$(grep -oE '/Branch/assets/index-[^"]+\.css' /tmp/index.html | head -1)
+          test -n "$JS_PATH"
+          test -n "$CSS_PATH"
+          curl -fsSL "https://jing-gou.github.io${JS_PATH}" -o /dev/null
+          curl -fsSL "https://jing-gou.github.io${CSS_PATH}" -o /dev/null
+          echo "Asset checks passed."
