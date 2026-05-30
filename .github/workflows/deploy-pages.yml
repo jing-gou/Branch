@@ -33,6 +33,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Prepare GitHub Pages artifact
+        run: |
+          cp dist/index.html dist/404.html
+          test -f dist/assets/index-*.js
+          test -f dist/assets/index-*.css
+          ls -la dist dist/assets | head -20
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
