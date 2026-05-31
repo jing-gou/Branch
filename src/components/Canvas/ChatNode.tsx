@@ -17,6 +17,7 @@ import {
 } from '../../utils/nodeMessages'
 import { MarkdownContent } from './MarkdownContent'
 import { useFlowScrollContainer } from '../../hooks/useFlowScrollContainer'
+import { useTouchTransformScroll } from '../../hooks/useTouchTransformScroll'
 import { usePrefersTouchScroll } from '../../hooks/useMediaQuery'
 
 interface MessageSectionProps {
@@ -45,10 +46,12 @@ function MessageSection({
   const editingTarget = useConversationStore((state) => state.editingTarget)
   const clearEditingTarget = useConversationStore((state) => state.clearEditingTarget)
   const prefersTouchScroll = usePrefersTouchScroll()
+  const useTransformScroll = scrollableInReadOnly && prefersTouchScroll
   const flowScroll = useFlowScrollContainer({
-    active: scrollableInReadOnly,
+    active: scrollableInReadOnly && !useTransformScroll,
     wheel: scrollableInReadOnly && !prefersTouchScroll,
   })
+  const touchScroll = useTouchTransformScroll(useTransformScroll)
   const isUser = message.role === 'user'
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
@@ -101,14 +104,14 @@ function MessageSection({
   const labelClass = isUser ? 'text-sky-400' : 'text-violet-400'
 
   const layoutClass = scrollableInReadOnly
-    ? 'nodrag nopan relative min-h-0 flex-1 overflow-hidden'
+    ? 'nodrag nopan relative min-h-0 flex-[1_1_0] overflow-hidden'
     : fitContent
       ? 'shrink-0'
       : 'min-h-0 flex-1'
 
   const contentClass = scrollableInReadOnly
-    ? prefersTouchScroll
-      ? 'chat-scroll chat-scroll-touch nodrag nopan nowheel absolute inset-0 overflow-y-auto overscroll-contain'
+    ? useTransformScroll
+      ? 'chat-markdown chat-scroll-touch nodrag nopan nowheel'
       : 'chat-scroll nodrag nopan nowheel absolute inset-0 overflow-y-auto overscroll-contain'
     : fitContent
       ? ''
@@ -150,15 +153,30 @@ function MessageSection({
           }}
         />
       ) : scrollableInReadOnly ? (
-        <div className="relative min-h-0 flex-1">
+        useTransformScroll ? (
           <div
-            ref={flowScroll.ref}
-            className={`chat-markdown ${contentClass}`}
-            onWheel={flowScroll.onWheel}
+            ref={touchScroll.viewportRef}
+            className="relative min-h-[72px] flex-[1_1_0] overflow-hidden"
           >
-            <MarkdownContent content={message.content} />
+            <div
+              ref={touchScroll.contentRef}
+              className={contentClass}
+              style={touchScroll.contentStyle}
+            >
+              <MarkdownContent content={message.content} />
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="relative min-h-0 flex-[1_1_0]">
+            <div
+              ref={flowScroll.ref}
+              className={`chat-markdown ${contentClass}`}
+              onWheel={flowScroll.onWheel}
+            >
+              <MarkdownContent content={message.content} />
+            </div>
+          </div>
+        )
       ) : (
         <div className={`chat-markdown ${contentClass}`}>
           <MarkdownContent content={message.content} />
@@ -335,7 +353,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
               ? MAX_NODE_HEIGHT
               : undefined,
         }}
-        className={`relative flex min-h-0 flex-col rounded-lg border shadow-sm ${borderClass} ${
+        className={`relative flex h-full min-h-0 w-full flex-col rounded-lg border shadow-sm ${borderClass} ${
           merged
             ? mergedReadOnlyLayout
               ? 'min-h-0 overflow-hidden'
@@ -393,7 +411,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
             selected={selected ?? false}
             readOnly={readOnlyMode}
             scrollableInReadOnly={readOnlyMode}
-            className={readOnlyMode ? 'nodrag nopan min-h-0 flex-1 overflow-hidden' : ''}
+            className={readOnlyMode ? 'nodrag nopan min-h-0 flex-[1_1_0] overflow-hidden' : ''}
           />
         ) : null}
 

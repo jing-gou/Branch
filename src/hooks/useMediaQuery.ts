@@ -21,9 +21,24 @@ export function useIsMobile() {
   return useMediaQuery('(max-width: 767px)')
 }
 
+function useHasTouchScreen() {
+  const [hasTouchScreen, setHasTouchScreen] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return navigator.maxTouchPoints > 0
+  })
+
+  useEffect(() => {
+    setHasTouchScreen(navigator.maxTouchPoints > 0)
+  }, [])
+
+  return hasTouchScreen
+}
+
 /** 主输入为触屏（手机 / iPad），阅读模式 A 区用手指滑动、隐藏滚动条 */
 export function usePrefersTouchScroll() {
   const coarseNoHover = useMediaQuery('(hover: none) and (pointer: coarse)')
   const narrowCoarse = useMediaQuery('(max-width: 1024px) and (pointer: coarse)')
-  return coarseNoHover || narrowCoarse
+  const isMobile = useIsMobile()
+  const hasTouchScreen = useHasTouchScreen()
+  return coarseNoHover || narrowCoarse || isMobile || hasTouchScreen
 }
