@@ -115,9 +115,16 @@ export function WebDavSettings() {
               value={config.remotePath}
               disabled={!config.enabled || busy}
               onChange={(event) => updateConfig({ remotePath: event.target.value })}
-              placeholder="远程目录"
+              placeholder="远程目录（默认 branch）"
               className="w-full rounded-md border border-slate-700 bg-slate-800 px-2 py-1.5 text-xs text-slate-200 placeholder:text-slate-500 focus:border-violet-500 focus:outline-none disabled:cursor-not-allowed"
             />
+            <p className="text-[11px] leading-relaxed text-slate-500">
+              同步文件为{' '}
+              <span className="text-slate-400">
+                {config.remotePath.trim() || 'branch'}/workspace.json
+              </span>
+              ，内含全部项目；不会按项目单独上传 JSON。
+            </p>
             <div className="grid grid-cols-2 gap-1.5">
               <input
                 type="text"
@@ -170,10 +177,9 @@ export function WebDavSettings() {
                     if (err) throw new WebDavError(err)
                     const workspace = getCurrentWorkspace()
                     const result = await syncWorkspaceWithWebDav(config, workspace)
-                    if (result.action === 'pulled' && result.envelope) {
+                    if (result.action !== 'noop' && result.envelope) {
                       hydrateWorkspace(result.envelope.workspace)
                     }
-                    if (result.action === 'pushed') saveWorkspace(workspace)
                   }, '同步完成')
                 }
                 className="rounded-md border border-violet-700 bg-violet-950 px-2 py-1.5 text-xs text-violet-300 hover:border-violet-500 disabled:opacity-40"

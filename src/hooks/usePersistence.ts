@@ -6,7 +6,7 @@ import {
   saveWorkspace,
 } from '../utils/persistence'
 import { loadWebDavConfig } from '../utils/webdavConfig'
-import { pushWorkspaceToWebDav, syncWorkspaceWithWebDav } from '../utils/webdavSync'
+import { syncWorkspaceWithWebDav } from '../utils/webdavSync'
 
 const AUTOSAVE_MS = 800
 const WEBDAV_AUTOSAVE_MS = 2000
@@ -24,10 +24,8 @@ export function usePersistence() {
       if (config.enabled && config.autoSync && config.url && config.username) {
         try {
           const result = await syncWorkspaceWithWebDav(config, workspace)
-          if (result.action === 'pulled' && result.envelope) {
+          if (result.action !== 'noop' && result.envelope) {
             workspace = result.envelope.workspace
-          } else if (result.action === 'pushed') {
-            saveWorkspace(workspace)
           }
         } catch {
           // Keep local workspace if remote sync fails on startup.
@@ -78,9 +76,28 @@ export function usePersistence() {
           layoutDirection: state.layoutDirection,
         })
 
-        void pushWorkspaceToWebDav(config, workspace).catch(() => {
-          // Silent fail for background auto upload; user can use manual sync UI.
-        })
+        void syncWorkspaceWithWebDav(config, workspace)
+          .then((result) => {
+            if (result.action === 'noop' || !result.envelope) return
+            const merged = result.envelope.workspace
+            const state = useConversationStore.getState()
+            const previousIds = state.projects
+              .map((project) => project.id)
+              .sort()
+              .join(',')
+            const mergedIds = merged.projects
+              .map((project) => project.id)
+              .sort()
+              .join(',')
+            if (previousIds !== mergedIds) {
+              state.hydrateWorkspace(merged)
+              return
+            }
+            useConversationStore.setState({ projects: merged.projects })
+          })
+          .catch(() => {
+            // Silent fail for background auto upload; user can use manual sync UI.
+          })
       }, WEBDAV_AUTOSAVE_MS)
     })
 
