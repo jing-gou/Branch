@@ -16,6 +16,7 @@ import {
   isMergedNode,
 } from '../../utils/nodeMessages'
 import { MarkdownContent } from './MarkdownContent'
+import { usePrefersTouchScroll } from '../../hooks/useMediaQuery'
 
 interface MessageSectionProps {
   nodeId: string
@@ -24,8 +25,8 @@ interface MessageSectionProps {
   selected: boolean
   fitContent?: boolean
   readOnly?: boolean
-  /** 阅读模式下 A 块内上下滑滚动正文（替代细滚动条） */
-  touchScroll?: boolean
+  /** 阅读模式下 A 区可滚动（桌面滚轮 + 滚动条，触屏手指滑动） */
+  scrollableInReadOnly?: boolean
   className?: string
 }
 
@@ -36,12 +37,13 @@ function MessageSection({
   selected,
   fitContent = false,
   readOnly = false,
-  touchScroll = false,
+  scrollableInReadOnly = false,
   className = '',
 }: MessageSectionProps) {
   const updateMessage = useConversationStore((state) => state.updateMessage)
   const editingTarget = useConversationStore((state) => state.editingTarget)
   const clearEditingTarget = useConversationStore((state) => state.clearEditingTarget)
+  const prefersTouchScroll = usePrefersTouchScroll()
   const isUser = message.role === 'user'
   const [isEditing, setIsEditing] = useState(false)
   const [editContent, setEditContent] = useState(message.content)
@@ -93,16 +95,27 @@ function MessageSection({
     : 'border-violet-700/80 bg-violet-950/90'
   const labelClass = isUser ? 'text-sky-400' : 'text-violet-400'
 
-  const layoutClass = touchScroll
+  const layoutClass = scrollableInReadOnly
     ? 'min-h-0 flex-1'
     : fitContent
       ? 'shrink-0'
       : 'min-h-0 flex-1'
-  const contentClass = touchScroll
-    ? 'chat-scroll chat-scroll-touch nodrag nopan nowheel min-h-0 flex-1 overflow-y-auto'
+
+  const contentClass = scrollableInReadOnly
+    ? prefersTouchScroll
+      ? 'chat-scroll chat-scroll-touch nodrag nopan min-h-0 flex-1 overflow-y-auto'
+      : 'chat-scroll nodrag nopan nowheel min-h-0 flex-1 overflow-y-auto'
     : fitContent
       ? ''
       : 'chat-scroll min-h-0 flex-1 overflow-y-auto'
+
+  const handleContentWheel = useCallback(
+    (event: React.WheelEvent<HTMLDivElement>) => {
+      if (!scrollableInReadOnly || prefersTouchScroll) return
+      event.stopPropagation()
+    },
+    [scrollableInReadOnly, prefersTouchScroll],
+  )
 
   return (
     <div
@@ -142,6 +155,7 @@ function MessageSection({
       ) : (
         <div
           className={`chat-markdown ${contentClass}`}
+          onWheel={handleContentWheel}
         >
           <MarkdownContent content={message.content} />
         </div>
@@ -351,10 +365,8 @@ export function ChatNode({ id, data, selected }: NodeProps) {
               message={messages[0]}
               messageIndex={0}
               selected={selected ?? false}
-              fitContent={!mergedReadOnlyLayout}
+              fitContent
               readOnly={readOnlyMode}
-              touchScroll={mergedReadOnlyLayout}
-              className={mergedReadOnlyLayout ? 'max-h-[38%] shrink-0' : ''}
             />
             <div className="shrink-0 border-t border-slate-600" />
             <MessageSection
@@ -364,7 +376,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
               selected={selected ?? false}
               fitContent={!mergedReadOnlyLayout}
               readOnly={readOnlyMode}
-              touchScroll={mergedReadOnlyLayout}
+              scrollableInReadOnly={mergedReadOnlyLayout}
             />
           </>
         ) : singleMessage ? (
@@ -374,7 +386,8 @@ export function ChatNode({ id, data, selected }: NodeProps) {
             messageIndex={0}
             selected={selected ?? false}
             readOnly={readOnlyMode}
-            touchScroll={readOnlyMode}
+            scrollableInReadOnly={readOnlyMode}
+            className={readOnlyMode ? 'min-h-0 flex-1' : ''}
           />
         ) : null}
 

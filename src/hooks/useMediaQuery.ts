@@ -20,3 +20,8 @@ export function useMediaQuery(query: string): boolean {
 export function useIsMobile() {
   return useMediaQuery('(max-width: 767px)')
 }
+
+/** 主输入为触屏（手机 / iPad），阅读模式 A 区用手指滑动、隐藏滚动条 */
+export function usePrefersTouchScroll() {
+  return useMediaQuery('(hover: none) and (pointer: coarse)')
+}
