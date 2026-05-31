@@ -14,6 +14,27 @@ export const defaultWebDavConfig = (): WebDavConfig => ({
   password: '',
 })
 
+function normalizeWebDavUrl(url: string): string {
+  const trimmed = url.trim()
+  if (!trimmed) return trimmed
+
+  try {
+    const parsed = new URL(trimmed)
+    if (
+      typeof window !== 'undefined' &&
+      window.location.protocol === 'https:' &&
+      parsed.protocol === 'http:'
+    ) {
+      parsed.protocol = 'https:'
+      return parsed.toString()
+    }
+  } catch {
+    return trimmed
+  }
+
+  return trimmed
+}
+
 export function loadWebDavConfig(): WebDavConfig {
   const raw =
     localStorage.getItem(WEBDAV_CONFIG_KEY) ??
@@ -28,7 +49,7 @@ export function loadWebDavConfig(): WebDavConfig {
     const config: WebDavConfig = {
       enabled: Boolean(data.enabled),
       autoSync: Boolean(data.autoSync),
-      url: typeof data.url === 'string' ? data.url : '',
+      url: normalizeWebDavUrl(typeof data.url === 'string' ? data.url : ''),
       remotePath:
         typeof data.remotePath === 'string' && data.remotePath.trim()
           ? data.remotePath === 'ai-chat-tree'

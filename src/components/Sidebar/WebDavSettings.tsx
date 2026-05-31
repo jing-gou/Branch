@@ -166,6 +166,8 @@ export function WebDavSettings() {
                 disabled={!config.enabled || busy}
                 onClick={() =>
                   runAction(async () => {
+                    const err = validateWebDavConfig(config)
+                    if (err) throw new WebDavError(err)
                     const workspace = getCurrentWorkspace()
                     const result = await syncWorkspaceWithWebDav(config, workspace)
                     if (result.action === 'pulled' && result.envelope) {
@@ -183,6 +185,8 @@ export function WebDavSettings() {
                 disabled={!config.enabled || busy}
                 onClick={() =>
                   runAction(async () => {
+                    const err = validateWebDavConfig(config)
+                    if (err) throw new WebDavError(err)
                     const workspace = getCurrentWorkspace()
                     await pushWorkspaceToWebDav(config, workspace)
                     saveWorkspace(workspace)
@@ -197,6 +201,8 @@ export function WebDavSettings() {
                 disabled={!config.enabled || busy}
                 onClick={() =>
                   runAction(async () => {
+                    const err = validateWebDavConfig(config)
+                    if (err) throw new WebDavError(err)
                     const remote = await pullWorkspaceFromWebDav(config)
                     if (!remote) throw new WebDavError('远程尚无 workspace.json')
                     saveWorkspace(remote.workspace)

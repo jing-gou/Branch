@@ -30,6 +30,10 @@ function trimSlashes(value: string): string {
   return value.replace(/^\/+|\/+$/g, '')
 }
 
+function withTrailingSlash(url: string): string {
+  return url.endsWith('/') ? url : `${url}/`
+}
+
 export function buildWebDavAuth(config: WebDavConfig): string {
   return `Basic ${btoa(`${config.username}:${config.password}`)}`
 }
@@ -100,6 +104,16 @@ async function webDavFetch(
     if (error instanceof WebDavError) throw error
     const message =
       error instanceof Error ? error.message : 'Network request failed'
+    if (
+      message === 'Failed to fetch' &&
+      typeof window !== 'undefined' &&
+      window.location.protocol === 'https:' &&
+      config.url.trim().startsWith('http://')
+    ) {
+      throw new WebDavError(
+        '无法连接 WebDAV：当前页面为 HTTPS，请把 WebDAV 地址改为 https://',
+      )
+    }
     throw new WebDavError(
       `无法连接 WebDAV 服务器（可能是 CORS 限制或地址错误）：${message}`,
     )
@@ -115,7 +129,19 @@ export async function ensureRemoteDirectory(config: WebDavConfig): Promise<void>
   let currentPath = ''
   for (const segment of segments) {
     currentPath = `${currentPath}/${segment}`
-    const url = `${base}${currentPath}`
+    const url = withTrailingSlash(`${base}${currentPath}`)
+
+    const existing = await webDavFetch(url, config, {
+      method: 'PROPFIND',
+      headers: {
+        Depth: '0',
+        'Content-Type': 'application/xml; charset=utf-8',
+      },
+      body: PROPFIND_BODY,
+    })
+    if (existing.status === 207 || existing.status === 200) {
+      continue
+    }
 
     const response = await webDavFetch(url, config, { method: 'MKCOL' })
     if (
