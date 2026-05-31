@@ -63,6 +63,13 @@ export function validateWebDavConfig(config: WebDavConfig): string | null {
     if (!['http:', 'https:'].includes(parsed.protocol)) {
       return '服务器地址需以 http:// 或 https:// 开头'
     }
+    if (
+      typeof window !== 'undefined' &&
+      window.location.protocol === 'https:' &&
+      parsed.protocol === 'http:'
+    ) {
+      return '当前页面为 HTTPS，WebDAV 须使用 https:// 地址，否则浏览器会拦截（混合内容）'
+    }
   } catch {
     return '服务器地址格式无效'
   }

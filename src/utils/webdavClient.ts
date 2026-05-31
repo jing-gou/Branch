@@ -3,6 +3,10 @@ import {
   WEBDAV_SYNC_FILENAME,
 } from '../lib/webdav'
 import type { WebDavConfig } from '../types/webdav'
+import {
+  buildDigestAuthorization,
+  parseDigestChallenge,
+} from './webdavDigest'
 
 const PROPFIND_BODY = `<?xml version="1.0" encoding="utf-8" ?>
 <D:propfind xmlns:D="DAV:">
@@ -45,15 +49,55 @@ async function webDavFetch(
   config: WebDavConfig,
   init: RequestInit,
 ): Promise<Response> {
-  const headers = new Headers(init.headers)
-  headers.set('Authorization', buildWebDavAuth(config))
+  const method = (init.method ?? 'GET').toUpperCase()
+
+  const send = (authorization?: string) => {
+    const headers = new Headers(init.headers)
+    if (authorization) {
+      headers.set('Authorization', authorization)
+    }
+    return fetch(url, { ...init, headers })
+  }
+
+  const readDigestChallenge = (response: Response) =>
+    parseDigestChallenge(response.headers.get('www-authenticate'))
+
+  const sendDigest = (challenge: NonNullable<ReturnType<typeof readDigestChallenge>>) =>
+    send(
+      buildDigestAuthorization(
+        method,
+        url,
+        config.username,
+        config.password,
+        challenge,
+      ),
+    )
 
   try {
-    return await fetch(url, {
-      ...init,
-      headers,
-    })
+    let response = await send(buildWebDavAuth(config))
+
+    if (response.status !== 401) return response
+
+    let challenge = readDigestChallenge(response)
+    if (!challenge) {
+      const probe = await send(undefined)
+      if (probe.status === 401) {
+        challenge = readDigestChallenge(probe)
+      }
+    }
+
+    if (challenge) {
+      response = await sendDigest(challenge)
+      if (response.status !== 401) return response
+      throw new WebDavError('认证失败，请检查用户名或密码', response.status)
+    }
+
+    throw new WebDavError(
+      'Digest 认证无法完成：浏览器读不到 WWW-Authenticate。请在 Nginx 增加 Access-Control-Expose-Headers: WWW-Authenticate',
+      401,
+    )
   } catch (error) {
+    if (error instanceof WebDavError) throw error
     const message =
       error instanceof Error ? error.message : 'Network request failed'
     throw new WebDavError(

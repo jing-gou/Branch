@@ -7,11 +7,13 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview --base /Branch/"
+    "preview": "vite preview --base /Branch/",
+    "test:webdav": "node scripts/test-webdav.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.10.2",
     "dagre": "^0.8.5",
+    "js-md5": "^0.8.3",
     "katex": "^0.17.0",
     "lucide-react": "^1.17.0",
     "react": "^19.2.6",
