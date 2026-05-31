@@ -23,5 +23,7 @@ export function useIsMobile() {
 
 /** 主输入为触屏（手机 / iPad），阅读模式 A 区用手指滑动、隐藏滚动条 */
 export function usePrefersTouchScroll() {
-  return useMediaQuery('(hover: none) and (pointer: coarse)')
+  const coarseNoHover = useMediaQuery('(hover: none) and (pointer: coarse)')
+  const narrowCoarse = useMediaQuery('(max-width: 1024px) and (pointer: coarse)')
+  return coarseNoHover || narrowCoarse
 }

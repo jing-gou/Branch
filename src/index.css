@@ -59,6 +59,11 @@ body,
   touch-action: pan-y;
 }
 
+/* 覆盖 React Flow 外层 touch-pan，确保节点内可纵向滑动 */
+.react-flow__node .chat-scroll-touch {
+  touch-action: pan-y;
+}
+
 @media (hover: none) and (pointer: coarse) {
   .chat-scroll-touch {
     scrollbar-width: none;

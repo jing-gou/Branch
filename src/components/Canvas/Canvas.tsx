@@ -236,7 +236,9 @@ export function Canvas({ onOpenSidebar }: CanvasProps) {
         </header>
       )}
 
-      <div className="relative min-h-0 flex-1 touch-pan-x touch-pan-y">
+      <div
+        className={`relative min-h-0 flex-1 ${readOnlyMode ? '' : 'touch-pan-x touch-pan-y'}`}
+      >
         <ReactFlowProvider>
           <CanvasInner />
           <CanvasToolbar />
