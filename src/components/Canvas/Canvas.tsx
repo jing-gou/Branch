@@ -45,6 +45,7 @@ function FitViewOnGraphChange() {
 
 function CanvasInner() {
   const isMobile = useIsMobile()
+  const readOnlyMode = useConversationStore((state) => state.readOnlyMode)
   const nodes = useConversationStore((state) => state.nodes)
   const edges = useConversationStore((state) => state.edges)
   const viewport = useConversationStore((state) => state.viewport)
@@ -56,17 +57,28 @@ function CanvasInner() {
   const deleteNode = useConversationStore((state) => state.deleteNode)
   const disconnectEdge = useConversationStore((state) => state.disconnectEdge)
 
-  const onNodesChange = useCallback((changes: NodeChange[]) => {
-    const filtered = changes.filter((change) => change.type !== 'remove')
-    if (filtered.length === 0) return
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      if (readOnlyMode) {
+        const filtered = changes.filter(
+          (change) => change.type !== 'position' && change.type !== 'dimensions',
+        )
+        if (filtered.length === 0) return
+        changes = filtered
+      }
 
-    useConversationStore.setState({
-      nodes: applyNodeChanges(
-        filtered,
-        useConversationStore.getState().nodes,
-      ) as ChatFlowNode[],
-    })
-  }, [])
+      const filtered = changes.filter((change) => change.type !== 'remove')
+      if (filtered.length === 0) return
+
+      useConversationStore.setState({
+        nodes: applyNodeChanges(
+          filtered,
+          useConversationStore.getState().nodes,
+        ) as ChatFlowNode[],
+      })
+    },
+    [readOnlyMode],
+  )
 
   const onEdgesChange = useCallback((changes: EdgeChange[]) => {
     const filtered = changes.filter((change) => change.type !== 'remove')
@@ -157,12 +169,15 @@ function CanvasInner() {
       onNodeDragStart={onNodeDragStart}
       onSelectionChange={onSelectionChange}
       defaultEdgeOptions={defaultEdgeOptions}
-      nodesConnectable
+      nodesDraggable={!readOnlyMode}
+      nodesConnectable={!readOnlyMode}
+      elementsSelectable={!readOnlyMode}
+      edgesFocusable={!readOnlyMode}
       edgesReconnectable={false}
-      elementsSelectable
-      edgesFocusable
-      deleteKeyCode={['Backspace', 'Delete']}
-      multiSelectionKeyCode="Shift"
+      deleteKeyCode={readOnlyMode ? null : ['Backspace', 'Delete']}
+      multiSelectionKeyCode={readOnlyMode ? null : 'Shift'}
+      panOnDrag
+      selectionOnDrag={!readOnlyMode}
       connectionLineStyle={{ stroke: '#a78bfa', strokeWidth: 2 }}
       colorMode="dark"
       proOptions={{ hideAttribution: true }}
@@ -192,6 +207,7 @@ interface CanvasProps {
 
 export function Canvas({ onOpenSidebar }: CanvasProps) {
   const isMobile = useIsMobile()
+  const readOnlyMode = useConversationStore((state) => state.readOnlyMode)
   const activeProject = useConversationStore((state) =>
     state.projects.find((project) => project.id === state.activeProjectId),
   )
@@ -214,6 +230,7 @@ export function Canvas({ onOpenSidebar }: CanvasProps) {
             </p>
             <p className="truncate text-[11px] text-slate-500">
               {activeProject?.name ?? '未命名项目'}
+              {readOnlyMode ? ' · 阅读' : ''}
             </p>
           </div>
         </header>

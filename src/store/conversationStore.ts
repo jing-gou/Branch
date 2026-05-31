@@ -35,6 +35,7 @@ import {
   geminiTurnsToFlowGraph,
   parseGeminiShareHtml,
 } from '../utils/parseGeminiShareHtml'
+import { loadReadOnlyMode, saveReadOnlyMode } from '../lib/readOnlyMode'
 
 const INITIAL_VIEWPORT: Viewport = { x: 0, y: 0, zoom: 1 }
 
@@ -56,6 +57,10 @@ interface ConversationState {
   projects: Project[]
   past: GraphSnapshot[]
   future: GraphSnapshot[]
+
+  readOnlyMode: boolean
+  setReadOnlyMode: (enabled: boolean) => void
+  toggleReadOnlyMode: () => void
 
   setViewport: (viewport: Viewport) => void
   setSelectedNodeId: (nodeId: string | null) => void
@@ -174,6 +179,25 @@ export const useConversationStore = create<ConversationState>((set, get) => ({
   projects: [],
   past: [],
   future: [],
+
+  readOnlyMode: loadReadOnlyMode(),
+
+  setReadOnlyMode: (enabled) => {
+    saveReadOnlyMode(enabled)
+    set({
+      readOnlyMode: enabled,
+      ...(enabled
+        ? {
+            selectedNodeId: null,
+            selectedNodeIds: [],
+            selectedEdgeId: null,
+            editingTarget: null,
+          }
+        : {}),
+    })
+  },
+
+  toggleReadOnlyMode: () => get().setReadOnlyMode(!get().readOnlyMode),
 
   setViewport: (viewport) => set({ viewport }),
 

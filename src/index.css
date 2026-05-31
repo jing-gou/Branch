@@ -53,6 +53,22 @@ body,
   background: transparent;
 }
 
+.chat-scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+}
+
+@media (max-width: 767px) {
+  .chat-scroll-touch {
+    scrollbar-width: none;
+  }
+
+  .chat-scroll-touch::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 .chat-markdown {
   word-break: break-word;
   overflow-wrap: anywhere;

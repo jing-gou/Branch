@@ -5,9 +5,12 @@ import { useConversationStore } from '../../store/conversationStore'
 
 export function BlockFab() {
   const isMobile = useIsMobile()
+  const readOnlyMode = useConversationStore((state) => state.readOnlyMode)
   const [menuOpen, setMenuOpen] = useState(false)
   const addBlock = useConversationStore((state) => state.addBlock)
   const addQaBlock = useConversationStore((state) => state.addQaBlock)
+
+  if (readOnlyMode) return null
 
   const fabClass =
     'pointer-events-auto inline-flex items-center justify-center gap-2 rounded-full border text-sm font-medium shadow-lg backdrop-blur-sm transition'

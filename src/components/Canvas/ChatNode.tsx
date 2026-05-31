@@ -23,6 +23,10 @@ interface MessageSectionProps {
   messageIndex: number
   selected: boolean
   fitContent?: boolean
+  readOnly?: boolean
+  /** 阅读模式下 A 块内上下滑滚动正文（替代细滚动条） */
+  touchScroll?: boolean
+  className?: string
 }
 
 function MessageSection({
@@ -31,6 +35,9 @@ function MessageSection({
   messageIndex,
   selected,
   fitContent = false,
+  readOnly = false,
+  touchScroll = false,
+  className = '',
 }: MessageSectionProps) {
   const updateMessage = useConversationStore((state) => state.updateMessage)
   const editingTarget = useConversationStore((state) => state.editingTarget)
@@ -41,6 +48,7 @@ function MessageSection({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
+    if (readOnly) return
     if (
       editingTarget?.nodeId === nodeId &&
       editingTarget.messageIndex === messageIndex
@@ -48,7 +56,14 @@ function MessageSection({
       setIsEditing(true)
       clearEditingTarget()
     }
-  }, [clearEditingTarget, editingTarget, messageIndex, nodeId])
+  }, [clearEditingTarget, editingTarget, messageIndex, nodeId, readOnly])
+
+  useEffect(() => {
+    if (readOnly && isEditing) {
+      setIsEditing(false)
+      setEditContent(message.content)
+    }
+  }, [readOnly, isEditing, message.content])
 
   useEffect(() => {
     if (!isEditing) {
@@ -78,15 +93,22 @@ function MessageSection({
     : 'border-violet-700/80 bg-violet-950/90'
   const labelClass = isUser ? 'text-sky-400' : 'text-violet-400'
 
-  const layoutClass = fitContent ? 'shrink-0' : 'min-h-0 flex-1'
-  const contentClass = fitContent
-    ? ''
-    : 'chat-scroll min-h-0 flex-1 overflow-y-auto'
+  const layoutClass = touchScroll
+    ? 'min-h-0 flex-1'
+    : fitContent
+      ? 'shrink-0'
+      : 'min-h-0 flex-1'
+  const contentClass = touchScroll
+    ? 'chat-scroll chat-scroll-touch nodrag nopan nowheel min-h-0 flex-1 overflow-y-auto'
+    : fitContent
+      ? ''
+      : 'chat-scroll min-h-0 flex-1 overflow-y-auto'
 
   return (
     <div
-      className={`flex flex-col px-3 py-2 ${sectionClass} ${layoutClass}`}
+      className={`flex flex-col px-3 py-2 ${sectionClass} ${layoutClass} ${className}`}
       onDoubleClick={(event) => {
+        if (readOnly) return
         event.stopPropagation()
         setIsEditing(true)
       }}
@@ -125,7 +147,7 @@ function MessageSection({
         </div>
       )}
 
-      {selected && !isEditing && (
+      {selected && !isEditing && !readOnly && (
         <p className="mt-1 shrink-0 text-[10px] text-slate-600">
           双击编辑此段
         </p>
@@ -194,14 +216,16 @@ function useMergedAutoHeight(
 
 export function ChatNode({ id, data, selected }: NodeProps) {
   const nodeData = data as ChatNodeData
+  const readOnlyMode = useConversationStore((state) => state.readOnlyMode)
   const messages = getNodeMessages(nodeData)
   const merged = isMergedNode(nodeData)
   const defaults = defaultNodeDimensions()
   const width = nodeData.width ?? defaults.width
   const singleHeight = nodeData.height ?? defaults.height
 
+  const mergedReadOnlyLayout = merged && readOnlyMode
   const mergedAuto = useMergedAutoHeight(
-    merged,
+    merged && !readOnlyMode,
     id,
     width,
     messages,
@@ -214,7 +238,15 @@ export function ChatNode({ id, data, selected }: NodeProps) {
   const pushHistory = useConversationStore((state) => state.pushHistory)
   const deleteNode = useConversationStore((state) => state.deleteNode)
 
-  const height = merged ? mergedAuto.height : singleHeight
+  const height = merged
+    ? mergedReadOnlyLayout
+      ? Math.min(nodeData.height ?? MAX_NODE_HEIGHT, MAX_NODE_HEIGHT)
+      : mergedAuto.height
+    : singleHeight
+
+  const showResizer = selected && !readOnlyMode
+  const showSelectionRing = selected && !readOnlyMode
+  const showDelete = selected && !readOnlyMode
 
   const targetPosition =
     layoutDirection === 'LR' ? Position.Left : Position.Top
@@ -254,45 +286,54 @@ export function ChatNode({ id, data, selected }: NodeProps) {
 
   return (
     <>
-      <NodeResizer
-        minWidth={MIN_NODE_WIDTH}
-        minHeight={minHeight}
-        maxWidth={MAX_NODE_WIDTH}
-        maxHeight={MAX_NODE_HEIGHT}
-        isVisible={selected}
-        onResizeStart={handleResizeStart}
-        onResize={handleResize}
-        onResizeEnd={handleResize}
-        lineClassName="!border-violet-500/80"
-        handleClassName="!h-2.5 !w-2.5 !rounded-sm !border-violet-400 !bg-violet-300/90"
-      />
+      {showResizer && (
+        <NodeResizer
+          minWidth={MIN_NODE_WIDTH}
+          minHeight={minHeight}
+          maxWidth={MAX_NODE_WIDTH}
+          maxHeight={MAX_NODE_HEIGHT}
+          isVisible={selected}
+          onResizeStart={handleResizeStart}
+          onResize={handleResize}
+          onResizeEnd={handleResize}
+          lineClassName="!border-violet-500/80"
+          handleClassName="!h-2.5 !w-2.5 !rounded-sm !border-violet-400 !bg-violet-300/90"
+        />
+      )}
 
       <div
-        ref={merged ? mergedAuto.containerRef : undefined}
+        ref={merged && !readOnlyMode ? mergedAuto.containerRef : undefined}
         style={{
           width,
           height: merged
-            ? mergedAuto.overflows
-              ? mergedAuto.height
-              : undefined
+            ? mergedReadOnlyLayout
+              ? height
+              : mergedAuto.overflows
+                ? mergedAuto.height
+                : undefined
             : height,
-          maxHeight: merged && mergedAuto.overflows ? MAX_NODE_HEIGHT : undefined,
+          maxHeight:
+            merged && !mergedReadOnlyLayout && mergedAuto.overflows
+              ? MAX_NODE_HEIGHT
+              : undefined,
         }}
         className={`relative flex flex-col rounded-lg border shadow-sm ${borderClass} ${
           merged
-            ? mergedAuto.overflows
-              ? 'chat-scroll overflow-y-auto'
-              : 'h-auto'
+            ? mergedReadOnlyLayout
+              ? 'overflow-hidden'
+              : mergedAuto.overflows
+                ? 'chat-scroll overflow-y-auto'
+                : 'h-auto'
             : 'overflow-hidden'
-        } ${selected ? 'ring-2 ring-violet-400/80' : ''}`}
+        } ${showSelectionRing ? 'ring-2 ring-violet-400/80' : ''}`}
       >
         <Handle
           type="target"
           position={targetPosition}
-          className="!bg-slate-400"
+          className={`!bg-slate-400 ${readOnlyMode ? '!opacity-0 !pointer-events-none' : ''}`}
         />
 
-        {selected && (
+        {showDelete && (
           <button
             type="button"
             onClick={handleDelete}
@@ -310,7 +351,10 @@ export function ChatNode({ id, data, selected }: NodeProps) {
               message={messages[0]}
               messageIndex={0}
               selected={selected ?? false}
-              fitContent
+              fitContent={!mergedReadOnlyLayout}
+              readOnly={readOnlyMode}
+              touchScroll={mergedReadOnlyLayout}
+              className={mergedReadOnlyLayout ? 'max-h-[38%] shrink-0' : ''}
             />
             <div className="shrink-0 border-t border-slate-600" />
             <MessageSection
@@ -318,7 +362,9 @@ export function ChatNode({ id, data, selected }: NodeProps) {
               message={messages[1]}
               messageIndex={1}
               selected={selected ?? false}
-              fitContent
+              fitContent={!mergedReadOnlyLayout}
+              readOnly={readOnlyMode}
+              touchScroll={mergedReadOnlyLayout}
             />
           </>
         ) : singleMessage ? (
@@ -327,10 +373,12 @@ export function ChatNode({ id, data, selected }: NodeProps) {
             message={singleMessage}
             messageIndex={0}
             selected={selected ?? false}
+            readOnly={readOnlyMode}
+            touchScroll={readOnlyMode}
           />
         ) : null}
 
-        {selected && !merged && (
+        {selected && !merged && !readOnlyMode && (
           <p className="shrink-0 px-3 pb-2 text-[10px] text-slate-600">
             双击编辑 · 拖拽边角调整大小
           </p>
@@ -339,7 +387,7 @@ export function ChatNode({ id, data, selected }: NodeProps) {
         <Handle
           type="source"
           position={sourcePosition}
-          className="!bg-slate-400"
+          className={`!bg-slate-400 ${readOnlyMode ? '!opacity-0 !pointer-events-none' : ''}`}
         />
       </div>
     </>

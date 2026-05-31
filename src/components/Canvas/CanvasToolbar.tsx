@@ -1,7 +1,9 @@
 import {
   ArrowDown,
   ArrowRight,
+  Eye,
   GitMerge,
+  Pencil,
   Redo2,
   Undo2,
   Unlink,
@@ -26,6 +28,10 @@ export function CanvasToolbar() {
   const nodes = useConversationStore((state) => state.nodes)
   const disconnectEdge = useConversationStore((state) => state.disconnectEdge)
   const mergeQaNodes = useConversationStore((state) => state.mergeQaNodes)
+  const readOnlyMode = useConversationStore((state) => state.readOnlyMode)
+  const toggleReadOnlyMode = useConversationStore(
+    (state) => state.toggleReadOnlyMode,
+  )
 
   const canUndo = past.length > 0
   const canRedo = future.length > 0
@@ -53,6 +59,25 @@ export function CanvasToolbar() {
 
   return (
     <div className="pointer-events-auto absolute right-2 bottom-[max(0.75rem,env(safe-area-inset-bottom,0px))] left-2 z-10 flex max-w-[calc(100%-1rem)] justify-start overflow-x-auto rounded-lg border border-slate-700/80 bg-slate-900/95 p-1 shadow-lg backdrop-blur-sm [-webkit-overflow-scrolling:touch] md:right-auto md:bottom-4 md:left-4 md:max-w-none">
+      <button
+        type="button"
+        title={readOnlyMode ? '退出阅读模式' : '阅读模式（画布拖动平移，块内滑动读正文）'}
+        aria-label={readOnlyMode ? '退出阅读模式' : '阅读模式'}
+        aria-pressed={readOnlyMode}
+        onClick={toggleReadOnlyMode}
+        className={`${btnClass} ${readOnlyMode ? activeClass : ''}`}
+      >
+        {readOnlyMode ? (
+          <Eye className="h-4 w-4" />
+        ) : (
+          <Pencil className="h-4 w-4" />
+        )}
+      </button>
+
+      <div className="mx-0.5 h-6 w-px shrink-0 self-center bg-slate-700" />
+
+      {!readOnlyMode && (
+        <>
       {layoutOptions.map(({ direction, icon: Icon, label }) => (
         <button
           key={direction}
@@ -121,6 +146,8 @@ export function CanvasToolbar() {
           >
             <GitMerge className="h-4 w-4" />
           </button>
+        </>
+      )}
         </>
       )}
     </div>
