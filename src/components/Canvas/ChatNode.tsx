@@ -101,25 +101,22 @@ function MessageSection({
   const labelClass = isUser ? 'text-sky-400' : 'text-violet-400'
 
   const layoutClass = scrollableInReadOnly
-    ? 'nodrag nopan min-h-0 flex-1'
+    ? 'nodrag nopan relative min-h-0 flex-1 overflow-hidden'
     : fitContent
       ? 'shrink-0'
       : 'min-h-0 flex-1'
 
   const contentClass = scrollableInReadOnly
     ? prefersTouchScroll
-      ? 'chat-scroll chat-scroll-touch nodrag nopan nowheel h-0 min-h-0 flex-1 overflow-y-auto'
-      : 'chat-scroll nodrag nopan nowheel h-0 min-h-0 flex-1 overflow-y-auto'
+      ? 'chat-scroll chat-scroll-touch nodrag nopan nowheel absolute inset-0 overflow-y-auto overscroll-contain'
+      : 'chat-scroll nodrag nopan nowheel absolute inset-0 overflow-y-auto overscroll-contain'
     : fitContent
       ? ''
       : 'chat-scroll min-h-0 flex-1 overflow-y-auto'
 
-  const sectionTouchClass =
-    scrollableInReadOnly && prefersTouchScroll ? 'min-h-0 flex-1 overflow-hidden' : ''
-
   return (
     <div
-      className={`flex min-h-0 flex-col px-3 py-2 ${sectionClass} ${layoutClass} ${sectionTouchClass} ${className}`}
+      className={`flex min-h-0 flex-col px-3 py-2 ${sectionClass} ${layoutClass} ${className}`}
       onDoubleClick={(event) => {
         if (readOnly) return
         event.stopPropagation()
@@ -152,14 +149,18 @@ function MessageSection({
             }
           }}
         />
+      ) : scrollableInReadOnly ? (
+        <div className="relative min-h-0 flex-1">
+          <div
+            ref={flowScroll.ref}
+            className={`chat-markdown ${contentClass}`}
+            onWheel={flowScroll.onWheel}
+          >
+            <MarkdownContent content={message.content} />
+          </div>
+        </div>
       ) : (
-        <div
-          ref={flowScroll.ref}
-          className={`chat-markdown ${contentClass}`}
-          onTouchStartCapture={flowScroll.onTouchStartCapture}
-          onTouchMoveCapture={flowScroll.onTouchMoveCapture}
-          onWheel={flowScroll.onWheel}
-        >
+        <div className={`chat-markdown ${contentClass}`}>
           <MarkdownContent content={message.content} />
         </div>
       )}
